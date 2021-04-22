@@ -358,6 +358,7 @@ contract SHEESHAVaultLP is Ownable, ReentrancyGuard {
                 sheeshaReward = sheeshaReward.add(blockReward);
                 _lpRewards = _lpRewards.sub(blockReward);
             }
+            accSheeshaPerShare = accSheeshaPerShare.add(sheeshaReward.mul(1e12).div(lpSupply));
         }
         return user.amount.mul(accSheeshaPerShare).div(1e12).sub(user.rewardDebt);
     }
