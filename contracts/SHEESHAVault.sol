@@ -290,7 +290,7 @@ contract SHEESHAVault is Ownable, ReentrancyGuard {
             sheesha.burn(burnAmount);
             //add tax into rewards distribution
             tokenRewards = tokenRewards.add(fees.sub(burnAmount));
-            pool.token.safeTransfer(address(msg.sender), _amount.sub(fees.sub(burnAmount)));
+            pool.token.safeTransfer(address(msg.sender), _amount.sub(fees));
         }
         user.rewardDebt = user.amount.mul(pool.accSheeshaPerShare).div(1e12);
         emit Withdraw(msg.sender, _pid, _amount);
@@ -312,7 +312,7 @@ contract SHEESHAVault is Ownable, ReentrancyGuard {
         sheesha.burn(burnAmount);
         //add tax into rewards distribution
         tokenRewards = tokenRewards.add(fees.sub(burnAmount));
-        pool.token.safeTransfer(address(msg.sender), user.amount.sub(fees.sub(burnAmount)));
+        pool.token.safeTransfer(address(msg.sender), user.amount.sub(fees));
         emit EmergencyWithdraw(msg.sender, _pid, user.amount);
         user.amount = 0;
         user.rewardDebt = 0;
