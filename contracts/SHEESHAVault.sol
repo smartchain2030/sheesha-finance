@@ -2,11 +2,11 @@
 
 pragma solidity 0.7.6;
 
-import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v3.3.0/contracts/token/ERC20/IERC20.sol";
-import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v3.3.0/contracts/token/ERC20/SafeERC20.sol";
-import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v3.3.0/contracts/math/SafeMath.sol";
-import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v3.3.0/contracts/access/Ownable.sol";
-import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v3.3.0/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
+import "@openzeppelin/contracts/math/SafeMath.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "./SHEESHA.sol";
 
 contract SHEESHAVault is Ownable, ReentrancyGuard {
@@ -63,7 +63,6 @@ contract SHEESHAVault is Ownable, ReentrancyGuard {
 
     mapping(address => bool) internal isExisting;
 
-
     event Deposit(address indexed user, uint256 indexed pid, uint256 amount);
     event Withdraw(address indexed user, uint256 indexed pid, uint256 amount);
     event EmergencyWithdraw(
@@ -74,8 +73,8 @@ contract SHEESHAVault is Ownable, ReentrancyGuard {
 
     constructor(
         SHEESHA _sheesha,
-        uint256 _startBlock;
-        uint256 _tokenRewards;
+        uint256 _startBlock,
+        uint256 _tokenRewards,
     ) {
         sheesha = _sheesha;
         startBlock = _startBlock;
@@ -141,7 +140,7 @@ contract SHEESHAVault is Ownable, ReentrancyGuard {
         uint256 length = poolInfo.length;
 
         for (uint256 pid = 0; pid < length; ++pid) {
-            updatePoolRequest(pid);
+            updatePool(pid);
         }
     }
 
@@ -171,34 +170,6 @@ contract SHEESHAVault is Ownable, ReentrancyGuard {
         pool.lastRewardBlock = block.number;
     }
 
-    function updatePoolBy100(uint256 _pid) public {
-        PoolInfo storage pool = poolInfo[_pid];
-        
-        uint256 lastBlockPlus100 = (pool.lastRewardBlock + 100);
-
-        if (lastBlockPlus100 >= block.number) {
-            return;
-        }
-        uint256 tokenSupply = pool.token.balanceOf(address(this));
-        if (tokenSupply == 0) {
-            pool.lastRewardBlock = lastBlockPlus100;
-            return;
-        }
-
-        uint256 sheeshaReward;
-        
-        uint256 multiplier = getMultiplier(pool.lastRewardBlock, lastBlockPlus100);
-
-        for(uint256 i = 1; i <= multiplier; i++) {
-            uint256 blockReward = (tokenRewards.mul(sheeshaPerBlock).div(percentageDivider)).mul(pool.allocPoint).div(totalAllocPoint);
-            sheeshaReward = sheeshaReward.add(blockReward);
-            tokenRewards = tokenRewards.sub(blockReward);
-        }
-
-        pool.accSheeshaPerShare = pool.accSheeshaPerShare.add(sheeshaReward.mul(1e12).div(tokenSupply));
-        pool.lastRewardBlock = lastBlockPlus100;
-    }
-
     // Return reward multiplier over the given _from to _to block.
     function getMultiplier(uint256 _from, uint256 _to) public pure returns (uint256) {
         return _to.sub(_from);
@@ -217,18 +188,6 @@ contract SHEESHAVault is Ownable, ReentrancyGuard {
     function depositFor(address _depositFor, uint256 _pid, uint256 _amount) public {
         _deposit(_depositFor, _pid, _amount);
     }
-    
-    function updatePoolRequest(uint256 _pid) public {
-        PoolInfo storage pool = poolInfo[_pid];
-        
-        uint256 multiplier = getMultiplier(pool.lastRewardBlock, block.number);
-        
-        if(multiplier <=100) {
-            updatePool(_pid);
-        } else {
-            updatePoolBy100(_pid);
-        }
-    }
 
     function _deposit(address _depositFor, uint256 _pid, uint256 _amount) internal nonReentrant {
         if(!isUserExisting(_depositFor)) {
@@ -239,14 +198,7 @@ contract SHEESHAVault is Ownable, ReentrancyGuard {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][_depositFor];
 
-        uint256 multiplier = getMultiplier(pool.lastRewardBlock, block.number);
-        
-        if(multiplier <=100) {
-            updatePool(_pid);
-        } else {
-            updatePoolBy100(_pid);
-        }
-        
+        updatePool(_pid);
         if (user.amount > 0) {
             uint256 pending = user.amount.mul(pool.accSheeshaPerShare).div(1e12).sub(user.rewardDebt);
             safeSheeshaTransfer(_depositFor, pending);
@@ -274,13 +226,7 @@ contract SHEESHAVault is Ownable, ReentrancyGuard {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
         require(user.amount >= _amount, "withdraw: not good");
-        uint256 multiplier = getMultiplier(pool.lastRewardBlock, block.number);
-        
-        if(multiplier <=100) {
-            updatePool(_pid);
-        } else {
-            updatePoolBy100(_pid);
-        }
+        updatePool(_pid);
         uint256 pending = user.amount.mul(pool.accSheeshaPerShare).div(1e12).sub(user.rewardDebt);
         safeSheeshaTransfer(msg.sender, pending);
         if(_amount > 0) {
@@ -328,7 +274,6 @@ contract SHEESHAVault is Ownable, ReentrancyGuard {
         UserInfo storage user = userInfo[_pid][_addr];
         user.rewardDebt = _rewardDebt;
         user.amount = _amount;
-        updatePoolRequest(_pid);
     }
 
     // Safe sheesha transfer function, just in case if rounding error causes pool to not have enough SHEESHAs
