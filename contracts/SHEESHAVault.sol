@@ -50,8 +50,8 @@ contract SHEESHAVault is Ownable, ReentrancyGuard {
     // The block number when SHEESHA mining starts.
     uint256 public startBlock;
 
-    // SHEESHA tokens percenatge created per block based on rewards pool- 0.01%
-    uint256 public constant sheeshaPerBlock = 1;
+    // SHEESHA tokens percenatge created per block based on rewards pool
+    uint256 public sheeshaPerBlock;
     //handle case till 0.01(2 decimal places)
     uint256 public constant percentageDivider = 10000;
     //10,000 sheesha 10% of supply
@@ -75,10 +75,14 @@ contract SHEESHAVault is Ownable, ReentrancyGuard {
         SHEESHA _sheesha,
         uint256 _startBlock,
         uint256 _tokenRewards,
+        uint256 _sheeshaPerBlock
     ) {
         sheesha = _sheesha;
         startBlock = _startBlock;
         tokenRewards = _tokenRewards;
+        //for eth- 0.002378234398782345 == 2378234398782345
+        //for bsc- 0.000475646879756469 == 475646879756469
+        sheeshaPerBlock = _sheeshaPerBlock;
     }
 
     function poolLength() external view returns (uint256) {
@@ -156,15 +160,15 @@ contract SHEESHAVault is Ownable, ReentrancyGuard {
             return;
         }
 
-        uint256 sheeshaReward;
-        
         uint256 multiplier = getMultiplier(pool.lastRewardBlock, block.number);
 
-        for(uint256 i = 1; i <= multiplier; i++) {
-            uint256 blockReward = (tokenRewards.mul(sheeshaPerBlock).div(percentageDivider)).mul(pool.allocPoint).div(totalAllocPoint);
-            sheeshaReward = sheeshaReward.add(blockReward);
-            tokenRewards = tokenRewards.sub(blockReward);
+        uint256 sheeshaReward = multiplier.mul(sheeshaPerBlock).mul(pool.allocPoint).div(totalAllocPoint);
+        
+        //if rewards exhausted
+        if(sheeshaReward > tokenRewards) {
+            sheeshaReward = tokenRewards;
         }
+        tokenRewards = tokenRewards.sub(sheeshaReward);
 
         pool.accSheeshaPerShare = pool.accSheeshaPerShare.add(sheeshaReward.mul(1e12).div(tokenSupply));
         pool.lastRewardBlock = block.number;
@@ -295,13 +299,7 @@ contract SHEESHAVault is Ownable, ReentrancyGuard {
         uint256 _tokenRewards = tokenRewards;
         if (block.number > pool.lastRewardBlock && tokenSupply != 0) {
             uint256 multiplier = getMultiplier(pool.lastRewardBlock, block.number);
-            uint256 sheeshaReward;
-
-            for(uint256 i = 1; i <= multiplier; i++) {
-                uint256 blockReward = (_tokenRewards.mul(sheeshaPerBlock).div(percentageDivider)).mul(pool.allocPoint).div(totalAllocPoint);
-                sheeshaReward = sheeshaReward.add(blockReward);
-                _tokenRewards = _tokenRewards.sub(blockReward);
-            }
+            uint256 sheeshaReward = multiplier.mul(sheeshaPerBlock).mul(pool.allocPoint).div(totalAllocPoint);
             accSheeshaPerShare = accSheeshaPerShare.add(sheeshaReward.mul(1e12).div(tokenSupply));
         }
         return user.amount.mul(accSheeshaPerShare).div(1e12).sub(user.rewardDebt);
