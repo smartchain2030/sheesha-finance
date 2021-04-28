@@ -196,11 +196,11 @@ contract SHEESHAVaultLP is Ownable, ReentrancyGuard {
         _deposit(_depositFor, _pid, _amount);
     }
 
-    function _deposit(address _depositFor, uint256 _pid, uint256 _amount) internal nonReentrant {
-        if(!isUserExisting(msg.sender)) {
-            userList[userCount] = msg.sender;
+    function _deposit(address _depositFor, uint256 _pid, uint256 _amount) internal nonReentrant {   
+        if(!isUserExisting(_depositFor)) {
+            userList[userCount] = _depositFor;
             userCount++;
-            isExisting[msg.sender] = true;
+            isExisting[_depositFor] = true;
         }
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][_depositFor];
@@ -218,6 +218,7 @@ contract SHEESHAVaultLP is Ownable, ReentrancyGuard {
         }
 
         if(_amount > 0) {
+            //this should be msg.sender only because sender is depositing on someone's behalf
             pool.lpToken.safeTransferFrom(address(msg.sender), address(this), _amount);
             user.amount = user.amount.add(_amount); // This is depositedFor address
         }

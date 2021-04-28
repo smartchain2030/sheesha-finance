@@ -209,6 +209,7 @@ contract SHEESHAVault is Ownable, ReentrancyGuard {
         }
 
         if(_amount > 0) {
+            //this should be msg.sender only because sender is depositing on someone's behalf
             pool.token.safeTransferFrom(address(msg.sender), address(this), _amount);
             user.amount = user.amount.add(_amount); // This is depositedFor address
         }
