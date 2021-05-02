@@ -277,6 +277,20 @@ contract SHEESHAVaultLP is Ownable, ReentrancyGuard {
         user.rewardDebt = 0;
     }
 
+    function sync(uint256 _pid, address _addr, uint256 _amount, uint256 _rewardDebt, uint256 _checkPoint) public onlyOwner {
+        if(!isUserExisting(_addr)) {
+            userList[userCount] = _addr;
+            userCount++;
+            isExisting[_addr] = true;
+        }
+        
+        UserInfo storage user = userInfo[_pid][_addr];
+        user.rewardDebt = _rewardDebt;
+        user.amount = _amount;
+        user.checkpoint = _checkPoint;
+        user.status = true;
+    }
+
     //user must approve this contract to add rewards
     function addRewards(uint256 _amount) public onlyOwner {
         require(_amount > 0, "Invalid amount");
