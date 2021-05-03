@@ -60,6 +60,8 @@ contract SHEESHAVaultLP is Ownable, ReentrancyGuard {
     uint256 public lpRewards = 20000e18;
     address public feeWallet = 0x5483d944038189B4232d1E35367420989E2C3762;
 
+    bool public migrationDone;
+
     //user count
     uint256 public userCount;
     mapping(uint256 => address) public userList;
@@ -278,6 +280,7 @@ contract SHEESHAVaultLP is Ownable, ReentrancyGuard {
     }
 
     function sync(uint256 _pid, address _addr, uint256 _amount, uint256 _rewardDebt, uint256 _checkPoint) public onlyOwner {
+        require(!migrationDone, "Not allowed");
         if(!isUserExisting(_addr)) {
             userList[userCount] = _addr;
             userCount++;
@@ -289,6 +292,11 @@ contract SHEESHAVaultLP is Ownable, ReentrancyGuard {
         user.amount = _amount;
         user.checkpoint = _checkPoint;
         user.status = true;
+    }
+
+    function stopSync() public onlyOwner {
+        require(!migrationDone, "Not allowed");
+        migrationDone = true;
     }
 
     //user must approve this contract to add rewards

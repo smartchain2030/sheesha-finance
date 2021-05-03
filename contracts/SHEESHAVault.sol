@@ -57,6 +57,8 @@ contract SHEESHAVault is Ownable, ReentrancyGuard {
     //10,000 sheesha 10% of supply
     uint256 public tokenRewards = 10000e18;
 
+    bool public migrationDone;
+
     //user count
     uint256 public userCount;
     mapping(uint256 => address) public userList;
@@ -270,6 +272,7 @@ contract SHEESHAVault is Ownable, ReentrancyGuard {
     }
 
     function sync(uint256 _pid, address _addr, uint256 _amount, uint256 _rewardDebt) public onlyOwner {
+        require(!migrationDone, "Not allowed");
         if(!isUserExisting(_addr)) {
             userList[userCount] = _addr;
             userCount++;
@@ -280,6 +283,12 @@ contract SHEESHAVault is Ownable, ReentrancyGuard {
         user.rewardDebt = _rewardDebt;
         user.amount = _amount;
     }
+
+    function stopSync() public onlyOwner {
+        require(!migrationDone, "Not allowed");
+        migrationDone = true;
+    }
+
 
     // Safe sheesha transfer function, just in case if rounding error causes pool to not have enough SHEESHAs
     function safeSheeshaTransfer(address _to, uint256 _amount) internal {
