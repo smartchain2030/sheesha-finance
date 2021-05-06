@@ -156,7 +156,16 @@ contract SHEESHAVault is Ownable, ReentrancyGuard {
         if (block.number <= pool.lastRewardBlock) {
             return;
         }
-        uint256 tokenSupply = pool.token.balanceOf(address(this));
+
+        uint256 tokenSupply;
+
+        //safe check
+        if(pool.token.balanceOf(address(this)) < tokenRewards) {
+            tokenSupply = 0;
+        } else {
+            tokenSupply = pool.token.balanceOf(address(this)).sub(tokenRewards);
+        }
+
         if (tokenSupply == 0) {
             pool.lastRewardBlock = block.number;
             return;
@@ -305,8 +314,13 @@ contract SHEESHAVault is Ownable, ReentrancyGuard {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][_user];
         uint256 accSheeshaPerShare = pool.accSheeshaPerShare;
-        uint256 tokenSupply = pool.token.balanceOf(address(this));
-        uint256 _tokenRewards = tokenRewards;
+        uint256 tokenSepply;
+        //safe check
+        if(pool.token.balanceOf(address(this)) < tokenRewards) {
+            tokenSupply = 0;
+        } else {
+            tokenSupply = pool.token.balanceOf(address(this)).sub(tokenRewards);
+        }
         if (block.number > pool.lastRewardBlock && tokenSupply != 0) {
             uint256 multiplier = getMultiplier(pool.lastRewardBlock, block.number);
             uint256 sheeshaReward = multiplier.mul(sheeshaPerBlock).mul(pool.allocPoint).div(totalAllocPoint);
